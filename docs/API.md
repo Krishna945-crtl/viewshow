@@ -28,7 +28,8 @@ Access tokens: JWT HS256, 30 min. Refresh tokens: random, stored as SHA-256, 14 
 | GET | `/movies/{id}/showtimes?city=&date=YYYY-MM-DD` | `{movie, dates[], theatres:[{theatre, shows[]}]}` (dates in IST) |
 | GET | `/shows/{id}` | show + movie + theatre |
 | GET | `/genres`, `/cities`, `/theatres?city=` | |
-| POST | `/themes/preview` | `{title, genres[], mood_tags[], synopsis, palette_hint[]}` -> generated theme |
+| POST | `/themes/preview` | `{title, genres[], keywords[], mood_tags[], synopsis, palette_hint[], art_palette[]}` -> generated theme with `explain` |
+| POST | `/themes/preview-art` | multipart `file` (JPEG/PNG/WebP, ≤ 6 MB) -> `{art_palette:[{hex, weight}]}`. Nothing stored; rate-limited |
 
 ## Seats
 
@@ -77,6 +78,11 @@ A held seat whose `tag` equals your `my_tag` is your own selection.
 | Method | Path |
 |---|---|
 | GET/POST | `/admin/movies`, PUT/DELETE `/admin/movies/{id}` (delete = archive) |
+| POST | `/admin/movies/{id}/artwork` multipart `file`, `keep_image` - poster colours -> theme; image kept only if `keep_image=true` |
+| DELETE | `/admin/movies/{id}/artwork` - forget the colours (and our stored poster) |
+| GET | `/admin/tmdb/status` - is TMDB import configured |
+| GET | `/admin/tmdb/search?q=&year=` - TMDB hits, each with `imported_id` if already in the catalogue |
+| POST | `/admin/tmdb/import/{tmdb_id}` - creates the movie (genres, keywords, cast, trailer, certificate, poster colours); 409 if already imported |
 | GET/POST | `/admin/themes`, PUT/DELETE `/admin/themes/{id}`, POST `/admin/themes/preview` |
 | POST | `/admin/theatres`, PUT `/admin/theatres/{id}` |
 | POST | `/admin/layouts/validate` - returns summary + seat preview without saving |

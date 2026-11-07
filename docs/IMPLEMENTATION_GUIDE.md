@@ -19,6 +19,11 @@ How the project was built, in the order you'd rebuild or extend it. Every phase 
 1. `theme_engine.py`: archetypes, scoring, blending, palette hints, title fallback, `guard()`.
 2. Admin themes CRUD + preview. Client `ThemeState` easing; lights/fog/particles/screen read from it.
 3. Theme Lab page; CSS `@property` colour transitions; procedural ambience.
+4. "Any movie" upgrade: `theme_lexicon.py` (27 looks, every TMDB genre, colour words), keyword + colour
+   evidence, proportional blending, per-title signature, `explain` block. Real-film regression tests.
+5. Poster colours: `palette.py` (Pillow median cut, bomb-safe), `/admin/movies/{id}/artwork`,
+   public `/themes/preview-art`, local object storage served at `/media`. Migration `0002`.
+6. Optional TMDB import (`tmdb.py`, `/admin/tmdb/*`) tested against a mocked TMDB.
 
 ## Phase 4 - Booking reliability
 1. Redis Lua holds with fixed deadlines + expiry zset; sweeper.

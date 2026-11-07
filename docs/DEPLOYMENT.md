@@ -15,6 +15,10 @@ API URL.
 
 * Strong random `CV_JWT_SECRET` and `CV_TICKET_SIGNING_SECRET` (32+ bytes each).
 * `CV_CORS_ORIGINS` = your web origin + `capacitor://localhost` + `http://localhost` (Android WebView).
+* Uploaded posters live in `CV_MEDIA_DIR` (a Docker volume in `docker-compose.yml`). On a multi-server setup,
+  swap `LocalStorage` in `app/services/storage.py` for an S3 / R2 / GCS class with the same `save` / `delete`.
+* Optional TMDB import: set `CV_TMDB_API_KEY` (or `CV_TMDB_READ_TOKEN`). `CV_TMDB_SHOW_POSTERS=false` keeps
+  only the poster colours. The API server needs outbound HTTPS to `api.themoviedb.org` and `image.tmdb.org`.
 * TLS in front of both services (the WebSocket becomes `wss://` automatically).
 * Managed Postgres with backups; Redis with persistence off is fine (holds are meant to be short-lived).
 * Scale API horizontally - holds and pub/sub are in Redis, the sweeper is multi-process safe.

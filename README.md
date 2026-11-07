@@ -9,7 +9,7 @@ Select Movie → Select City & Theatre → Select Date & Showtime → Enter 3D A
 → Explore & Select Seats → View From My Seat → Confirm Seats → Pay → Digital Ticket (QR)
 ```
 
-1. **Home** – browse movies by city, genre and language. Each movie has its own colour theme.
+1. **Home** – browse movies by city, genre and language. Each movie has its own auditorium theme.
 2. **Movie details** – synopsis, cast, trailer and a preview of the auditorium atmosphere.
 3. **Showtimes** – pick a date, theatre and show time.
 4. **Seat selection** – choose seats in the 3D auditorium or the 2D seat map.
@@ -24,6 +24,30 @@ Select Movie → Select City & Theatre → Select Date & Showtime → Enter 3D A
 8. **Admin** – manage movies, themes, theatres, seat layouts, shows, bookings, ticket check-in and stats.
 
 > Theatres in the seed data are demo venues with simulated seats. Payments run in sandbox mode.
+
+## Themes for any movie
+
+The auditorium re-lights itself for **every** film — not just the three reference looks (Dune, Godzilla,
+Avengers). Nothing is hard-coded per title.
+
+- Reads genres, title, synopsis, TMDB keywords, mood tags, colour words and the poster's colours.
+- Scores 27 visual looks (ocean, desert, sky, underworld, mythic, pop, noir, stage …), blends the top two.
+- Paints with the movie's own poster colours when available, then gives each film a small signature shift
+  so no two movies look the same.
+- Every theme comes with **"Why this look?"** — the exact signals that chose it.
+- Seat status colours never change, so availability is always readable.
+
+Examples from the seed data: Pushpa 2 → gritty gold & smoke, Barbie → candy pop pink, Avatar: The Way of Water →
+abyssal blue, Kalki 2898 AD → saffron & temple gold, La La Land → spotlight & velvet. Try your own film in
+**Theme Lab** (`/lab`). Details: `docs/THEME_ENGINE.md`.
+
+### Add any real movie
+
+- **Admin → Movies → Import from TMDB**: search, click Import — genres, keywords, cast, trailer, certificate
+  and poster colours come in and the theme is ready. Needs a free key from
+  https://www.themoviedb.org/settings/api in `backend/.env` as `CV_TMDB_API_KEY`.
+- **By hand**: title + genres + one line of synopsis is enough. Upload the poster to use its colours (the image
+  is only kept if you confirm you have the rights to show it).
 
 ## Tech stack
 
@@ -119,3 +143,4 @@ Set `NEXT_PUBLIC_API_URL` to a reachable API address before building for a phone
 - `docs/TESTING.md` – testing strategy
 - `docs/DEPLOYMENT.md` – deployment steps
 - `docs/IMPLEMENTATION_GUIDE.md` – phase-wise implementation guide
+- `docs/THEME_ENGINE.md` – how any movie gets its theme, with worked examples
