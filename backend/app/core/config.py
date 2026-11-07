@@ -36,6 +36,25 @@ class Settings(BaseSettings):
     register_limit_per_hour: int = 10
     login_limit_per_5min: int = 20
 
+    # uploaded artwork (posters). local disk by default, served at /media
+    media_dir: str = "media"
+    max_upload_mb: int = 6
+    art_preview_limit_per_10min: int = 30
+
+    # optional: import any real movie from TMDB (https://www.themoviedb.org/settings/api)
+    # either the v3 api key or the v4 read-access token works
+    tmdb_api_key: str = ""
+    tmdb_read_token: str = ""
+    tmdb_language: str = "en-US"
+    tmdb_region: str = "IN"  # which country's certificate (U / UA / A) to use
+    # show TMDB poster images in the app (allowed by TMDB's API terms, with attribution).
+    # false = only the poster's colours are used for the theme
+    tmdb_show_posters: bool = True
+
+    @property
+    def tmdb_enabled(self) -> bool:
+        return bool(self.tmdb_api_key or self.tmdb_read_token)
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -5,7 +5,8 @@ from app.services.theme_engine import resolve_theme
 
 def movie_signals(m: Movie) -> dict:
     return {"title": m.title, "tagline": m.tagline, "synopsis": m.synopsis, "genres": m.genres,
-            "mood_tags": m.mood_tags, "palette_hint": m.palette_hint}
+            "mood_tags": m.mood_tags, "keywords": m.keywords, "palette_hint": m.palette_hint,
+            "art_palette": m.art_palette}
 
 
 def movie_out(m: Movie, full: bool = False) -> dict:
@@ -22,7 +23,8 @@ def movie_out(m: Movie, full: bool = False) -> dict:
     }
     if full:
         data |= {"synopsis": m.synopsis, "cast": m.cast, "trailer_url": m.trailer_url,
-                 "mood_tags": m.mood_tags, "palette_hint": m.palette_hint}
+                 "mood_tags": m.mood_tags, "keywords": m.keywords, "palette_hint": m.palette_hint,
+                 "art_palette": m.art_palette, "tmdb_id": m.tmdb_id}
     return data
 
 

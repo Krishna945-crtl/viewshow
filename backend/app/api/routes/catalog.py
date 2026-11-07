@@ -1,11 +1,16 @@
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Query
+from typing import Annotated
+
+from fastapi import APIRouter, File, Query, Request, UploadFile
 from sqlalchemy import func, or_, select
 
 from app.api.deps import DB
 from app.api.serializers import movie_out, show_out
+from app.api.uploads import palette_or_400, read_image
+from app.core.config import get_settings
+from app.core.ratelimit import rate_limit
 from app.core.errors import not_found
 from app.models import Auditorium, Movie, Show, Theatre
 from app.schemas.api import ThemePreviewIn
@@ -114,3 +119,10 @@ async def get_show(show_id: str, db: DB):
 async def theme_preview(body: ThemePreviewIn):
     """Public playground: what atmosphere would the engine build for this movie?"""
     return generate_theme(body.model_dump())
+
+
+@router.post("/themes/preview-art")
+async def theme_preview_art(request: Request, file: Annotated[UploadFile, File()]):
+    """Public playground: colours of an image. Nothing is stored."""
+    await rate_limit(request, "art", get_settings().art_preview_limit_per_10min, 600)
+    return {"art_palette": palette_or_400(await read_image(file))}

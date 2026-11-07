@@ -95,6 +95,12 @@ class Movie(Base, Timestamped):
     mood_tags: Mapped[list] = mapped_column(JSON, default=list)
     # optional colours an admin picked off the key art, e.g. ["#1b3a6b", "#7fd3ff"]
     palette_hint: Mapped[list] = mapped_column(JSON, default=list)
+    # TMDB-style keywords ("kaiju", "desert planet") - strong theme signals
+    keywords: Mapped[list] = mapped_column(JSON, default=list)
+    # dominant colours pulled from an uploaded / imported poster: [{"hex", "weight"}]
+    art_palette: Mapped[list] = mapped_column(JSON, default=list)
+    # set when the movie was imported from TMDB, stops double imports
+    tmdb_id: Mapped[int | None] = mapped_column(Integer, unique=True)
     language: Mapped[str] = mapped_column(String(40), default="English")
     certificate: Mapped[str] = mapped_column(String(8), default="UA")
     runtime_minutes: Mapped[int] = mapped_column(Integer, default=120)

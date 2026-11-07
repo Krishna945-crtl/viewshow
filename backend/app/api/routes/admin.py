@@ -1,11 +1,15 @@
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy import delete, func, select
 
 from app.api.deps import DB, AdminUser, Holds
 from app.api.serializers import booking_out, movie_out, show_out
+from app.api.uploads import palette_or_400, read_image
+from app.core.config import get_settings
 from app.core.errors import AppError, bad_request, conflict, not_found
 from app.core.security import safe_equals, ticket_signature
 from app.models import (Auditorium, Booking, BookingSeat, BookingStatus, ErrorLog, Movie, MovieTheme, Payment,
@@ -13,7 +17,10 @@ from app.models import (Auditorium, Booking, BookingSeat, BookingStatus, ErrorLo
 from app.schemas.api import AuditoriumIn, MovieIn, ShowIn, TheatreIn, ThemeIn, ThemePreviewIn, TicketCheckIn
 from app.services import bookings as svc
 from app.services.layout import LayoutError, build_seats, layout_summary, normalise_layout
+from app.services.palette import PaletteError, extract_palette, image_format
+from app.services.storage import EXT, get_storage
 from app.services.theme_engine import generate_theme, guard
+from app.services.tmdb import TMDBClient, get_tmdb, search_result, to_movie_fields
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -68,6 +75,96 @@ async def archive_movie(movie_id: str, db: DB, _: AdminUser):
     await db.commit()
 
 
+# ---- artwork -> colours --------------------------------------------------------
+
+@router.post("/movies/{movie_id}/artwork")
+async def upload_artwork(movie_id: str, db: DB, _: AdminUser, file: Annotated[UploadFile, File()],
+                         keep_image: Annotated[bool, Form()] = False):
+    """Upload a poster / key art. Its dominant colours feed the theme engine.
+
+    keep_image=false (default): only the colours are stored, the file is dropped.
+    keep_image=true: the admin confirms the image is licensed and it becomes the poster.
+    """
+    m = await db.get(Movie, movie_id)
+    if not m:
+        raise not_found("Movie")
+    data = await read_image(file)
+    m.art_palette = palette_or_400(data)
+    if keep_image:
+        storage = get_storage()
+        storage.delete(m.poster_url)
+        m.poster_url = storage.save("posters", data, EXT[image_format(data)])
+    await db.commit()
+    return movie_out(await db.get(Movie, movie_id, populate_existing=True), full=True)
+
+
+@router.delete("/movies/{movie_id}/artwork")
+async def clear_artwork(movie_id: str, db: DB, _: AdminUser):
+    m = await db.get(Movie, movie_id)
+    if not m:
+        raise not_found("Movie")
+    get_storage().delete(m.poster_url)
+    if m.poster_url and m.poster_url.startswith("/media/"):
+        m.poster_url = None
+    m.art_palette = []
+    await db.commit()
+    return movie_out(await db.get(Movie, movie_id, populate_existing=True), full=True)
+
+
+# ---- import any real movie (TMDB) ------------------------------------------------
+
+TMDB = Annotated[TMDBClient, Depends(get_tmdb)]
+
+
+@router.get("/tmdb/status")
+async def tmdb_status(_: AdminUser):
+    s = get_settings()
+    return {"enabled": s.tmdb_enabled, "show_posters": s.tmdb_show_posters}
+
+
+@router.get("/tmdb/search")
+async def tmdb_search(q: str, db: DB, _: AdminUser, tmdb: TMDB, year: int | None = None):
+    q = q.strip()
+    if len(q) < 2:
+        raise bad_request("short_query", "Type at least 2 characters")
+    results = [search_result(r, get_settings().tmdb_show_posters) for r in (await tmdb.search(q, year))[:12]]
+    ids = [r["tmdb_id"] for r in results if r["tmdb_id"]]
+    have = dict((await db.execute(select(Movie.tmdb_id, Movie.id).where(Movie.tmdb_id.in_(ids)))).all()) if ids else {}
+    for r in results:
+        r["imported_id"] = have.get(r["tmdb_id"])
+    return results
+
+
+@router.post("/tmdb/import/{tmdb_id}", status_code=201)
+async def tmdb_import(tmdb_id: int, db: DB, _: AdminUser, tmdb: TMDB):
+    existing = (await db.execute(select(Movie).where(Movie.tmdb_id == tmdb_id))).unique().scalars().first()
+    if existing:
+        raise conflict("already_imported", "This movie is already in the catalogue", movie_id=existing.id)
+    s = get_settings()
+    details = await tmdb.movie(tmdb_id)
+    fields = to_movie_fields(details, s.tmdb_region, s.tmdb_show_posters)
+
+    # poster colours drive the theme even when we don't display the poster
+    art = []
+    poster = await tmdb.image(details.get("poster_path"))
+    if poster:
+        try:
+            art = extract_palette(poster)
+        except PaletteError:
+            art = []  # odd image - the text signals still give a good theme
+
+    slug = slugify(fields["title"])
+    if (await db.execute(select(Movie.id).where(Movie.slug == slug))).first():
+        year = fields["release_date"].year if fields["release_date"] else tmdb_id
+        slug = f"{slug}-{year}"[:120]
+        if (await db.execute(select(Movie.id).where(Movie.slug == slug))).first():
+            slug = f"{slug}-{tmdb_id}"[:120]
+    m = Movie(**fields, slug=slug, art_palette=art)
+    db.add(m)
+    await db.commit()
+    return movie_out(await db.get(Movie, m.id), full=True)
+
+
 # ---- themes ------------------------------------------------------------------
 
 @router.get("/themes")
@@ -80,7 +177,7 @@ async def themes(db: DB, _: AdminUser):
 async def create_theme(body: ThemeIn, db: DB, _: AdminUser):
     if (await db.execute(select(MovieTheme.id).where(MovieTheme.name == body.name))).first():
         raise conflict("name_taken", "Theme name already used")
-    t = MovieTheme(name=body.name, config=guard({**body.config, "name": body.name}))
+    t = MovieTheme(name=body.name, config=guard({**body.config, "name": body.name, "source": "custom"}))
     db.add(t)
     await db.commit()
     return {"id": t.id, "name": t.name, "config": t.config}
@@ -91,7 +188,7 @@ async def update_theme(theme_id: str, body: ThemeIn, db: DB, _: AdminUser):
     t = await db.get(MovieTheme, theme_id)
     if not t:
         raise not_found("Theme")
-    t.name, t.config = body.name, guard({**body.config, "name": body.name})
+    t.name, t.config = body.name, guard({**body.config, "name": body.name, "source": "custom"})
     await db.commit()
     return {"id": t.id, "name": t.name, "config": t.config}
 

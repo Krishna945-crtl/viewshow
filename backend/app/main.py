@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, auth, bookings, catalog, payments, seats
 from app.core.config import get_settings
@@ -14,6 +15,7 @@ from app.core.redis import close_redis, get_redis
 from app.db.session import dispose_engine, sessionmaker
 from app.models import ErrorLog
 from app.services.events import hub
+from app.services.storage import PUBLIC_PREFIX, get_storage
 from app.services.sweeper import run_forever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -67,6 +69,9 @@ def create_app() -> FastAPI:
 
     for r in (auth.router, catalog.router, seats.router, bookings.router, payments.router, admin.router):
         app.include_router(r, prefix="/api")
+
+    # uploaded posters. behind a CDN / bucket in production, plain files locally
+    app.mount(PUBLIC_PREFIX, StaticFiles(directory=get_storage().root), name="media")
 
     @app.get("/api/health")
     async def health():
