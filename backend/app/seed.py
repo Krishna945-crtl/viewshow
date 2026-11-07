@@ -176,6 +176,43 @@ MOVIES = [
     dict(title="Velvet Static", genres=[], language="English", certificate="UA", runtime_minutes=101, rating=6.9,
          tagline="(no genre data - watch the engine fall back to a title palette)",
          synopsis="An experimental film about a radio host who only broadcasts between midnight and one."),
+    # real titles, NO curated theme - proof the engine handles any film from plain metadata.
+    # one-line synopses are our own words; showtimes for them are simulated like everything else
+    dict(title="Pushpa 2: The Rule", genres=["Action", "Crime", "Drama"], language="Telugu", certificate="UA",
+         runtime_minutes=200, rating=7.6, tagline="The rule of the red forest.",
+         synopsis="A red sandalwood smuggler's empire keeps growing, and so does his war with a vengeful police "
+                  "officer."),
+    dict(title="Kalki 2898 AD", genres=["Science Fiction", "Action", "Fantasy"], language="Telugu",
+         certificate="UA", runtime_minutes=181, rating=7.4, tagline="The future has a prophecy.",
+         synopsis="In the dystopian city of Kasi, a bounty hunter crosses paths with a woman who may carry the "
+                  "divine avatar foretold in myth."),
+    dict(title="Barbie", genres=["Comedy", "Adventure", "Fantasy"], language="English", certificate="UA",
+         runtime_minutes=114, rating=7.0, tagline="A perfect world develops a glitch.",
+         synopsis="Life in a colourful, perfectly pink doll world starts glitching, and one doll heads to the real "
+                  "world for answers."),
+    dict(title="Avatar: The Way of Water", genres=["Science Fiction", "Adventure", "Action"], language="English",
+         certificate="UA", runtime_minutes=192, rating=7.6, tagline="Return to the reef.",
+         synopsis="A family on a distant moon flees into the ocean reefs and learns to live with the sea clans and "
+                  "their whale-like companions."),
+    dict(title="Top Gun: Maverick", genres=["Action", "Drama"], language="English", certificate="UA",
+         runtime_minutes=131, rating=8.2, tagline="One last mission above the clouds.",
+         synopsis="A veteran naval aviator returns to train a squadron of young fighter-jet pilots for a "
+                  "near-impossible mission."),
+    dict(title="Oppenheimer", genres=["Drama", "History"], language="English", certificate="UA",
+         runtime_minutes=180, rating=8.4, tagline="One equation. One long shadow.",
+         synopsis="The physicist who led the race to build the atomic bomb during World War II, and the long shadow "
+                  "it cast over his life."),
+    dict(title="La La Land", genres=["Romance", "Music", "Comedy", "Drama"], language="English", certificate="U",
+         runtime_minutes=128, rating=7.9, tagline="Two dreamers, one city.",
+         synopsis="A jazz pianist and an aspiring actress fall in love while chasing their dreams in Los Angeles."),
+    dict(title="Kantara", genres=["Action", "Drama", "Thriller"], language="Kannada", certificate="UA",
+         runtime_minutes=148, rating=8.2, tagline="The forest remembers.",
+         synopsis="A fiery young man in a coastal forest village is drawn into his ancestors' traditions and the "
+                  "divine spirit that guards the land."),
+    dict(title="Interstellar", genres=["Science Fiction", "Adventure", "Drama"], language="English",
+         certificate="UA", runtime_minutes=169, rating=8.7, tagline="Beyond the wormhole.",
+         synopsis="Explorers travel through a wormhole near Saturn to find a new home planet as crops fail back "
+                  "home."),
 ]
 
 SLOTS = [time(10, 0), time(13, 30), time(17, 0), time(20, 45)]
