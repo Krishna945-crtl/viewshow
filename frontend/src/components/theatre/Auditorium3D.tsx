@@ -13,6 +13,7 @@ import { roomBounds } from "./geometry";
 import Lights from "./Lights";
 import Particles from "./Particles";
 import Room from "./Room";
+import RowLabels from "./RowLabels";
 import Screen from "./Screen";
 import Seats from "./Seats";
 import { ThemeState } from "./themeState";
@@ -74,6 +75,7 @@ export default function Auditorium3D({ map, theme, interactive = true, onSeatCli
           <Room seats={map.seats} bounds={bounds} />
           <Screen spec={map.auditorium.screen} />
           <Seats seats={map.seats} interactive={interactive} onSeatClick={onSeatClick} />
+          <RowLabels seats={map.seats} />
           {particleCount > 0 && (
             <Particles count={particleCount} box={[bounds.width - 0.6, bounds.height - 0.2, bounds.depth + 1]} />
           )}

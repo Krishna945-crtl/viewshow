@@ -1,4 +1,4 @@
-import { CanvasTexture, LinearFilter, ShaderMaterial } from "three";
+import { CanvasTexture, LinearFilter, LinearMipmapLinearFilter, ShaderMaterial } from "three";
 
 const GRID = 10; // 10x10 -> seat numbers 1..100
 
@@ -21,8 +21,10 @@ export function numberAtlas() {
     g.fillText(String(i + 1), cx, cy);
   }
   atlas = new CanvasTexture(c);
-  atlas.minFilter = LinearFilter;
-  atlas.generateMipmaps = false;
+  // mipmaps keep far-away numbers legible ("1" was aliasing into "!" at the back of big halls)
+  atlas.minFilter = LinearMipmapLinearFilter;
+  atlas.magFilter = LinearFilter;
+  atlas.anisotropy = 4;
   atlas.flipY = false;
   return atlas;
 }
@@ -64,8 +66,10 @@ export function plateMaterial() {
         vec2 p = vUv - 0.5;
         float d = rbox(p * vec2(1.0, 0.56), vec2(0.47, 0.25), 0.1);
         if (d > 0.0) discard;
-        float idx = vNum - 1.0;
-        vec2 cell = vec2(mod(idx, ${GRID}.0), floor(idx / ${GRID}.0));
+        // varyings arrive as 10.99999 instead of 11.0 - snap to a whole index first,
+        // otherwise seats 1, 11, 21... read from the wrong atlas cell
+        float idx = floor(vNum - 0.5);
+        vec2 cell = vec2(mod(idx, ${GRID}.0), floor((idx + 0.5) / ${GRID}.0));
         vec2 local = vec2(vUv.x - 0.5, 0.5 - vUv.y) * vec2(1.25, 0.7);
         vec2 uv = (cell + vec2(0.5) + local) / ${GRID}.0;
         float ink = texture2D(uAtlas, vec2(uv.x, uv.y)).a;
