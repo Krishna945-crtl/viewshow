@@ -1,0 +1,43 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="CV_", extra="ignore")
+
+    app_name: str = "CineVerse 3D"
+    env: str = "dev"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cineverse"
+    redis_url: str = "redis://localhost:6379/0"
+
+    jwt_secret: str = "change-me-in-production-please-32b"
+    access_token_minutes: int = 30
+    refresh_token_days: int = 14
+
+    # seat hold window (seconds). the brief says 5 min to start with
+    hold_seconds: int = 300
+    # how long a pending booking waits for payment before we let the seats go
+    payment_window_seconds: int = 480
+    max_seats_per_booking: int = 10
+
+    # "mock" = local sandbox simulator, "razorpay" = Razorpay test mode
+    payment_provider: str = "mock"
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+    mock_payment_secret: str = "mock-sandbox-secret"
+
+    ticket_signing_secret: str = "ticket-secret-change-me"
+    cors_origins: str = "http://localhost:3000,capacitor://localhost,http://localhost"
+    sweeper_interval_seconds: float = 2.0
+    run_sweeper: bool = True
+
+    @property
+    def cors_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
