@@ -1,3 +1,4 @@
+import { assetUrl } from "@/lib/api";
 import { hashString } from "@/lib/theme";
 import type { Movie } from "@/lib/types";
 
@@ -9,7 +10,7 @@ import type { Movie } from "@/lib/types";
 export default function PosterArt({ movie, className = "" }: { movie: Movie; className?: string }) {
   if (movie.poster_url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={movie.poster_url} alt={`${movie.title} poster`} className={`object-cover ${className}`} loading="lazy" />;
+    return <img src={assetUrl(movie.poster_url)!} alt={`${movie.title} poster`} className={`object-cover ${className}`} loading="lazy" />;
   }
   const { primary, secondary, accent, background } = movie.theme.palette;
   const h = hashString(movie.title);
@@ -46,7 +47,7 @@ export default function PosterArt({ movie, className = "" }: { movie: Movie; cla
       <text x="14" y="262" fill="#fff" fontSize={movie.title.length > 16 ? 15 : 19} fontWeight="800" style={{ letterSpacing: "0.02em" }}>
         {movie.title.toUpperCase().slice(0, 26)}
       </text>
-      <text x="14" y="282" fill={accent} fontSize="9" opacity="0.9">{movie.genres.slice(0, 2).join(" · ").toUpperCase()}</text>
+      <text x="14" y="282" fill="#fff" fontSize="9" opacity="0.72" style={{ letterSpacing: "0.04em" }}>{movie.genres.slice(0, 2).join(" · ").toUpperCase()}</text>
     </svg>
   );
 }

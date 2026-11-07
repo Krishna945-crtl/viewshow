@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# the example file documents NEXT_PUBLIC_API_URL - keep it in git
+!.env.example

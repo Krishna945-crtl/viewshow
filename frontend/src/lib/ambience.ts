@@ -207,6 +207,25 @@ function build(ctx: AudioContext, preset: string, out: GainNode): Stop {
       n.connect(bp).connect(g).connect(bus); nodes.push(n, lfo(ctx, 0.06, 0.18, g.gain));
       break;
     }
+    case "lounge": {
+      // soft maj7 pad that breathes, plus the odd brushed-cymbal hiss
+      const lp = filter(ctx, "lowpass", 900); const g = ctx.createGain(); g.gain.value = 0.5; lp.connect(g).connect(bus);
+      [146.83, 185, 220, 277.18].forEach((f, i) => nodes.push(tone(ctx, f * (1 + i * 0.0015), "triangle", 0.025, lp)));
+      nodes.push(lfo(ctx, 0.08, 0.2, g.gain), lfo(ctx, 0.03, 300, lp.frequency));
+      const n = noise(ctx, "white"); const hp = filter(ctx, "highpass", 6000); const ng = ctx.createGain(); ng.gain.value = 0.015;
+      n.connect(hp).connect(ng).connect(bus); nodes.push(n, lfo(ctx, 0.5, 0.012, ng.gain));
+      break;
+    }
+    case "temple_bells": {
+      // low drone + far-off bell strikes (inharmonic partials make it read as metal)
+      const lp = filter(ctx, "lowpass", 300); lp.connect(bus);
+      nodes.push(tone(ctx, 65.4, "sine", 0.05, lp), tone(ctx, 98, "sine", 0.03, lp));
+      stops.push(sprinkle(ctx, bus, [3500, 8000], (t) => {
+        const f = [392, 440, 523.25][Math.floor(Math.random() * 3)];
+        [1, 2.76, 5.4].forEach((p, i) => blip(ctx, bus, t, f * p, 3.2 - i, 0.05 / (i + 1)));
+      }));
+      break;
+    }
   }
   return () => {
     stops.forEach((s) => s());

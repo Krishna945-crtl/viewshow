@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PosterArt from "@/components/ui/PosterArt";
 import ThemeApplier from "@/components/ui/ThemeApplier";
+import ThemeExplain from "@/components/ui/ThemeExplain";
 import { Empty, Spinner } from "@/components/ui/bits";
 import { runtime } from "@/lib/format";
 import type { Movie } from "@/lib/types";
@@ -57,7 +58,13 @@ export default function MovieDetail() {
                 <span key={i} className="size-8 rounded-lg border border-line" style={{ background: c }} title={c} />
               ))}
             </div>
-            <p className="text-xs text-muted mt-3">Particles: {t.particles.kind} · Ambience: {t.sound.preset.replace("_", " ")} (off until you enable it)</p>
+            <p className="text-xs text-muted mt-3">Particles: {t.particles.kind} · Ambience: {t.sound.preset.replaceAll("_", " ")} (off until you enable it)</p>
+            {t.source === "auto" && t.explain && (
+              <details className="mt-3">
+                <summary className="text-xs font-semibold cursor-pointer select-none">Why this atmosphere?</summary>
+                <div className="mt-2"><ThemeExplain theme={t} compact /></div>
+              </details>
+            )}
           </div>
         </div>
       </div>
@@ -72,6 +79,11 @@ export default function MovieDetail() {
           <p className="text-sm text-muted glass rounded-2xl p-6">No trailer has been added for this title yet. Admins can attach an authorised trailer link.</p>
         )}
       </section>
+      {m.tmdb_id && (
+        <p className="mt-8 text-[11px] text-muted">
+          Movie details{m.poster_url ? " and poster" : ""} from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
+      )}
     </div>
   );
 }

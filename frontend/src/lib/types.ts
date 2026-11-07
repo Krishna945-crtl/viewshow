@@ -17,6 +17,16 @@ export interface Theme {
   animation: { light_pulse: number; pulse_speed: number; transition_ms: number };
   sound: { preset: string; default_volume: number };
   seat_fabric: string;
+  explain?: ThemeExplain;
+}
+
+export interface Swatch { hex: string; weight: number }
+
+export interface ThemeExplain {
+  confidence: number;
+  palette_from: "archetypes" | "poster colours" | "admin colours" | "title signature";
+  signature_shift_deg: number;
+  signals: { archetype: string; label: string; score: number; evidence: string[] }[];
 }
 
 export interface Movie {
@@ -25,6 +35,12 @@ export interface Movie {
   release_date: string | null; poster_url: string | null; backdrop_url: string | null;
   is_active: boolean; theme: Theme; theme_id: string | null;
   synopsis?: string; cast?: string[]; trailer_url?: string | null; mood_tags?: string[]; palette_hint?: string[];
+  keywords?: string[]; art_palette?: Swatch[]; tmdb_id?: number | null;
+}
+
+export interface TmdbHit {
+  tmdb_id: number; title: string; year: number | null; language: string; overview: string;
+  rating: number | null; poster_thumb: string | null; imported_id: string | null;
 }
 
 export interface User { id: string; email: string; full_name: string; city: string | null; is_admin: boolean }
