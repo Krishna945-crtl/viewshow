@@ -1,84 +1,121 @@
 # CineVerse 3D
 
-Movie-ticket booking inside an interactive 3D auditorium that re-lights itself for every film.
+Movie ticket booking app with an interactive 3D auditorium. Works on web, Android and iOS.
 
-* **Web, Android, iOS from one codebase** - Next.js static export, packaged with Capacitor.
-* **Real 3D theatre** - instanced seats built from the venue's actual layout, curved screen, stadium risers,
-  aisle lighting, multiple camera viewpoints, touch + mouse controls.
-* **View From My Seat** - drops the camera to seated eye level and reports distance, how much of your view
-  the screen fills, off-centre angle and head tilt. Labelled as an estimate unless the venue's dimensions are verified.
-* **Dynamic Movie Theme Engine** - works for *any* movie. Admin-authored themes win; otherwise the engine
-  scores 15 visual archetypes against genre/mood tags/synopsis, blends the top two, bends towards key-art
-  colours, and falls back to a title-derived palette. Themes crossfade - Dune to Godzilla eases from
-  amber to abyssal blue in the same hall.
-* **Booking engine that doesn't double-book** - Redis Lua holds (all-or-nothing, 5-minute window that never
-  extends), a Postgres partial unique index as the last line of defence, idempotent payment confirmation,
-  replay-safe webhooks, late-payment recovery/refund flagging, automatic expiry.
-* **Live** - WebSockets (fanned out via Redis pub/sub) keep every viewer's 2D and 3D maps in sync.
-* **Smart seat recommendations** - geometry-based scoring + contiguous group search with budget filter.
-* **Accessible** - full 2D seat map with keyboard navigation and screen-reader labels, status shown by
-  pattern/symbol not just colour, high-contrast + reduced-motion modes, automatic 2D fallback when WebGL is
-  missing or the device is too slow.
-* **Original ambience** - every sound is synthesised live with Web Audio. Muted by default.
+## Workflow
 
-> All theatres in the seed data are fictional demo venues with simulated inventory, and the UI says so.
-> Payments run in sandbox mode (a local simulator, or Razorpay **test** keys). Nothing here sells real tickets.
+```
+Select Movie → Select City & Theatre → Select Date & Showtime → Enter 3D Auditorium
+→ Explore & Select Seats → View From My Seat → Confirm Seats → Pay → Digital Ticket (QR)
+```
 
-## Screens
+1. **Home** – browse movies by city, genre and language. Each movie has its own colour theme.
+2. **Movie details** – synopsis, cast, trailer and a preview of the auditorium atmosphere.
+3. **Showtimes** – pick a date, theatre and show time.
+4. **Seat selection** – choose seats in the 3D auditorium or the 2D seat map.
+   - Seat states: Available, Selected, Held, Booked, Blocked.
+   - Selected seats are held for 5 minutes.
+   - Other users' selections appear live.
+   - **View From My Seat** moves the camera to eye level at that seat and shows distance, viewing angle and screen size.
+   - **Best seats** suggests seats for a group size and budget.
+5. **Checkout** – booking summary and payment (sandbox mode).
+6. **Ticket** – digital ticket with QR code.
+7. **Profile** – upcoming and past bookings, cancellation.
+8. **Admin** – manage movies, themes, theatres, seat layouts, shows, bookings, ticket check-in and stats.
 
-| 3D auditorium (Godzilla theme) | View From My Seat |
+> Theatres in the seed data are demo venues with simulated seats. Payments run in sandbox mode.
+
+## Tech stack
+
+| Part | Stack |
 |---|---|
-| ![overview](docs/screenshots/overview.png) | ![seat view](docs/screenshots/seatview.png) |
-| **Theme crossfade mid-transition (Dune -> horror)** | **Admin theme editor with live preview** |
-| ![lab](docs/screenshots/lab_mid.png) | ![admin](docs/screenshots/admin_theme.png) |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS, React Three Fiber, Three.js, Drei, Framer Motion |
+| Mobile | Capacitor (Android / iOS) |
+| Backend | Python, FastAPI, WebSockets |
+| Database | PostgreSQL, Redis |
+| Payments | Razorpay (test mode) / local sandbox |
+| Deployment | Docker, Docker Compose |
 
-Mobile: [3D on a Pixel 7](docs/screenshots/mobile3d.png) · Accessible [2D map](docs/screenshots/map2d.png) · [Home](docs/screenshots/home.png)
+## Steps to run
 
-## Quick start (Docker)
+### Option 1 – Docker
 
 ```bash
 docker compose up --build
 ```
 
-Web: http://localhost:3000 · API docs: http://localhost:8000/api/docs
+- Web: http://localhost:3000
+- API docs: http://localhost:8000/api/docs
 
-Logins: `demo@cineverse.dev / Demo@1234` and admin `admin@cineverse.dev / Admin@123`.
-
-## Local development
+### Option 2 – Manual setup
 
 Requirements: Python 3.12+, Node 22, PostgreSQL 16, Redis 7.
 
+**Backend**
+
 ```bash
 cd backend
-python -m venv .venv && . .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env            # adjust DB/Redis URLs
+cp .env.example .env
 alembic upgrade head
-python -m app.seed               # --reset to wipe and reseed
+python -m app.seed
 uvicorn app.main:app --reload --port 8000
 ```
+
+**Frontend**
 
 ```bash
 cd frontend
 npm install
-npm run dev                      # http://localhost:3000
+npm run dev
 ```
 
-## Tests
+Open http://localhost:3000
+
+### Demo logins
+
+| Role | Email | Password |
+|---|---|---|
+| User | demo@cineverse.dev | Demo@1234 |
+| Admin | admin@cineverse.dev | Admin@123 |
+
+## Steps to test
 
 ```bash
-cd backend && python -m pytest -q          # 68 tests: unit, integration, concurrency, payments, live websockets
-cd frontend && npx vitest run              # theme transitions, geometry, seat-state logic
-cd frontend && npx playwright test --trace off   # e2e on desktop + Pixel 7 (needs API + built site, see docs/TESTING.md)
+cd backend && python -m pytest -q
 ```
+
+```bash
+cd frontend && npx vitest run
+```
+
+```bash
+cd frontend && npx playwright test --trace off
+```
+
+End-to-end tests need the API running on port 8000 and the built site on port 3000 – see `docs/TESTING.md`.
+
+## Steps to build Android / iOS
+
+```bash
+cd frontend
+npx next build
+npx cap add android
+npx cap add ios
+npx cap sync
+npx cap open android
+npx cap open ios
+```
+
+Set `NEXT_PUBLIC_API_URL` to a reachable API address before building for a phone.
 
 ## Documentation
 
-| Doc | What's inside |
-|---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, folder structure, DB schema, theme engine, 3D implementation, UI components |
-| [docs/API.md](docs/API.md) | Every endpoint + WebSocket protocol |
-| [docs/FLOWS.md](docs/FLOWS.md) | Reservation, payment and expiry sequence diagrams |
-| [docs/TESTING.md](docs/TESTING.md) | Test strategy and how to run each layer |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker, production settings, Razorpay test mode, Android/iOS with Capacitor |
-| [docs/IMPLEMENTATION_GUIDE.md](docs/IMPLEMENTATION_GUIDE.md) | Phase-by-phase build guide and what's next |
+- `docs/ARCHITECTURE.md` – system design, folder structure, database schema
+- `docs/API.md` – API endpoints
+- `docs/FLOWS.md` – reservation and payment flows
+- `docs/TESTING.md` – testing strategy
+- `docs/DEPLOYMENT.md` – deployment steps
+- `docs/IMPLEMENTATION_GUIDE.md` – phase-wise implementation guide
