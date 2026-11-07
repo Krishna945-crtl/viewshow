@@ -23,7 +23,7 @@ IST = ZoneInfo("Asia/Kolkata")
 
 LAYOUTS = {
     "Screen 1 · Grand Arc": {
-        "screen": {"width": 18, "height": 7.6, "curvature": 0.22, "distance": 6.5, "bottom": 1.5},
+        "screen": {"width": 15, "height": 6.4, "curvature": 0.22, "distance": 7.0, "bottom": 1.5},
         "aisle_width": 1.3, "arc_focus": 24, "rise_per_row": 0.34, "flat_rows": 2,
         "rows": (
             [{"label": r, "category": "standard", "blocks": [5, 12, 5]} for r in "ABCD"]

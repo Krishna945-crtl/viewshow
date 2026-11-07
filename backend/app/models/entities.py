@@ -143,7 +143,8 @@ class Seat(Base):
     label: Mapped[str] = mapped_column(String(8))
     category: Mapped[SeatCategory] = mapped_column(_enum(SeatCategory))
     block: Mapped[int] = mapped_column(Integer, default=0)
-    # metres, x = across, y = up, z = towards back of hall. screen sits at negative z
+    # metres. x = across, y = up, z = distance back from the screen plane (z=0).
+    # yaw = rotation about +Y; 0 means facing straight at the screen (-z)
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
     z: Mapped[float] = mapped_column(Float)

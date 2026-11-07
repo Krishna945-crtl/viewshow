@@ -8,6 +8,8 @@ from app.api.deps import DB
 from app.api.serializers import movie_out, show_out
 from app.core.errors import not_found
 from app.models import Auditorium, Movie, Show, Theatre
+from app.schemas.api import ThemePreviewIn
+from app.services.theme_engine import generate_theme
 
 router = APIRouter(tags=["catalog"])
 IST = ZoneInfo("Asia/Kolkata")  # demo venues are all in India
@@ -106,3 +108,9 @@ async def get_show(show_id: str, db: DB):
     t = s.auditorium.theatre
     return {**show_out(s), "movie": movie_out(s.movie, full=True),
             "theatre": {"id": t.id, "name": t.name, "city": t.city, "address": t.address, "is_demo": t.is_demo}}
+
+
+@router.post("/themes/preview")
+async def theme_preview(body: ThemePreviewIn):
+    """Public playground: what atmosphere would the engine build for this movie?"""
+    return generate_theme(body.model_dump())

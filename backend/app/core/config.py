@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,capacitor://localhost,http://localhost"
     sweeper_interval_seconds: float = 2.0
     run_sweeper: bool = True
+    # auth abuse limits (per IP). raise them for load/e2e runs
+    register_limit_per_hour: int = 10
+    login_limit_per_5min: int = 20
 
     @property
     def cors_list(self) -> list[str]:

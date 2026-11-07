@@ -25,7 +25,7 @@ async def _issue(db, user: User) -> TokenOut:
 
 @router.post("/register", response_model=TokenOut, status_code=201)
 async def register(body: RegisterIn, db: DB, request: Request):
-    await rate_limit(request, "register", 10, 3600)
+    await rate_limit(request, "register", get_settings().register_limit_per_hour, 3600)
     email = body.email.lower()
     if (await db.execute(select(User.id).where(User.email == email))).first():
         raise AppError(409, "email_taken", "An account with this email already exists")
@@ -38,7 +38,7 @@ async def register(body: RegisterIn, db: DB, request: Request):
 
 @router.post("/login", response_model=TokenOut)
 async def login(body: LoginIn, db: DB, request: Request):
-    await rate_limit(request, "login", 20, 300)
+    await rate_limit(request, "login", get_settings().login_limit_per_5min, 300)
     user = (await db.execute(select(User).where(User.email == body.email.lower()))).scalars().first()
     if not user or not verify_password(body.password, user.password_hash) or not user.is_active:
         raise AppError(401, "bad_credentials", "Email or password is incorrect")

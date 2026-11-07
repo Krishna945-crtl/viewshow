@@ -17,7 +17,7 @@ from app.core.redis import get_redis  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_engine, sessionmaker  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Show  # noqa: E402
+from app.models import Auditorium, Show  # noqa: E402
 from app.seed import seed  # noqa: E402
 
 _counter = itertools.count()
@@ -69,7 +69,9 @@ def register(client):
 @pytest.fixture
 async def show_id():
     async with sessionmaker()() as db:
-        s = (await db.execute(select(Show).where(Show.starts_at > datetime.now(timezone.utc))
+        # a seeded big hall, never the tiny ones admin tests create
+        s = (await db.execute(select(Show).join(Auditorium).where(Show.starts_at > datetime.now(timezone.utc),
+                                                                  Auditorium.name.like("%Grand Arc%"))
                               .order_by(Show.starts_at.desc()).limit(1))).unique().scalars().first()
         return s.id
 

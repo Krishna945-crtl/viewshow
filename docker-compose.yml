@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cineverse
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      CV_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cineverse
+      CV_REDIS_URL: redis://redis:6379/0
+      CV_JWT_SECRET: ${CV_JWT_SECRET:-dev-only-change-me-0123456789abcdef}
+      CV_TICKET_SIGNING_SECRET: ${CV_TICKET_SIGNING_SECRET:-dev-only-ticket-secret}
+      CV_PAYMENT_PROVIDER: ${CV_PAYMENT_PROVIDER:-mock}
+      CV_RAZORPAY_KEY_ID: ${CV_RAZORPAY_KEY_ID:-}
+      CV_RAZORPAY_KEY_SECRET: ${CV_RAZORPAY_KEY_SECRET:-}
+      CV_RAZORPAY_WEBHOOK_SECRET: ${CV_RAZORPAY_WEBHOOK_SECRET:-}
+      CV_CORS_ORIGINS: http://localhost:3000,capacitor://localhost,http://localhost
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ["8000:8000"]
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    depends_on: [api]
+    ports: ["3000:80"]
+
+volumes:
+  pgdata:

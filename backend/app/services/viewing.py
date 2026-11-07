@@ -9,7 +9,7 @@ from math import atan2, degrees, exp, hypot
 
 from app.services.layout import EYE_HEIGHT
 
-IDEAL_FOV = 40.0  # horizontal angle the screen should fill (THX-ish sweet spot)
+IDEAL_FOV = 45.0  # horizontal angle the screen should fill (between SMPTE 30 and immersive ~60)
 
 
 @dataclass(slots=True)
@@ -33,7 +33,7 @@ def view_metrics(x: float, y: float, z: float, screen: dict) -> ViewMetrics:
     off_axis = degrees(atan2(abs(x), max(z, 0.1)))
     vertical = degrees(atan2(centre_y - eye_y, max(dist, 0.1)))  # + = looking up
 
-    s_fov = exp(-(((fov - IDEAL_FOV) / 14) ** 2))
+    s_fov = exp(-(((fov - IDEAL_FOV) / 18) ** 2))
     s_axis = max(0.0, 1 - off_axis / 38)
     # small upward tilt is fine, neck strain past ~20 deg, looking down is meh
     if vertical > 0:

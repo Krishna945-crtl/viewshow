@@ -85,3 +85,8 @@ async def test_validation_errors_are_friendly(client, register):
     admin, _ = await register(admin=True)
     r = await client.post("/admin/movies", headers=admin, json={"title": "", "palette_hint": ["red"]})
     assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid"
+
+
+async def test_public_theme_playground(client):
+    r = await client.post("/themes/preview", json={"title": "Glacier Run", "mood_tags": ["ice", "snow"]})
+    assert r.status_code == 200 and r.json()["archetypes"][0] == "frost"

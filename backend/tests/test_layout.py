@@ -38,7 +38,8 @@ def test_curved_rows_are_symmetric_and_face_centre():
     row = [s for s in seats if s.row_label == "A"]
     assert row[0].x == pytest.approx(-row[-1].x, abs=1e-3)
     assert row[0].yaw == pytest.approx(-row[-1].yaw, abs=1e-3)
-    assert row[0].yaw > 0 > row[-1].yaw  # outer seats turn inwards
+    # yaw = rotation about +Y with the seat facing -z (the screen): left seats turn right
+    assert row[0].yaw < 0 < row[-1].yaw
 
 
 @pytest.mark.parametrize("bad", [

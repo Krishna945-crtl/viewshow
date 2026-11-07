@@ -38,11 +38,12 @@ def live_server():
     proc.wait(5)
 
 
-async def _next(ws, kind, timeout=5):
+async def _next(ws, kind, timeout=5, where=lambda m: True):
+    # other tests share this show, so skip unrelated broadcasts
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=end - time.monotonic()))
-        if msg["type"] == kind:
+        if msg["type"] == kind and where(msg):
             return msg
     raise AssertionError(f"no {kind} message")
 
@@ -59,10 +60,11 @@ async def test_live_seat_updates_and_expiry_broadcast(live_server, show_id, seat
             sid = seats[0]["id"]
             await c.post(f"/shows/{show_id}/holds", json={"seat_ids": [sid]},
                          headers={"Authorization": f"Bearer {token}"})
-            upd = await _next(watcher, "seats")
-            assert upd["changes"][0] == {"seat_id": sid, "state": "held", "tag": upd["changes"][0]["tag"]}
+            mine = lambda m: any(c["seat_id"] == sid for c in m["changes"])  # noqa: E731
+            upd = await _next(watcher, "seats", where=mine)
+            assert upd["changes"][0]["state"] == "held" and upd["changes"][0]["tag"]
             # 2s hold window on this server -> sweeper should announce the release
-            freed = await _next(watcher, "seats", timeout=6)
+            freed = await _next(watcher, "seats", timeout=6, where=mine)
             assert freed["changes"] == [{"seat_id": sid, "state": "available"}]
 
 

@@ -127,7 +127,7 @@ def build_seats(layout: dict) -> list[SeatSpec]:
                 if focus > 0:
                     radius = z + focus
                     angle = x_flat / radius
-                    x, zz, yaw = sin(angle) * radius, cos(angle) * radius - focus, -angle
+                    x, zz, yaw = sin(angle) * radius, cos(angle) * radius - focus, angle
                 else:
                     x, zz, yaw = x_flat, z, 0.0
                 seats.append(

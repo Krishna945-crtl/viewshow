@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
+/* theme tokens - ThemeProvider rewrites the --cv-* vars per movie, everything
+   else reads from them so the whole UI shifts colour with the auditorium */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cv-primary: #7c5cff;
+  --cv-secondary: #1a1440;
+  --cv-accent: #5fe1ff;
+  --cv-bg: #07070b;
+  --cv-surface: #12121a;
+  --cv-text: #f2f2f5;
+  --cv-muted: #a1a1b5;
+  --cv-border: rgba(255, 255, 255, 0.09);
+
+  /* seat status colours are fixed on purpose - never themed */
+  --seat-available: #f4f6f8;
+  --seat-selected: #22c55e;
+  --seat-held: #f59e0b;
+  --seat-booked: #4b5563;
+  --seat-blocked: #1f2937;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--cv-primary);
+  --color-secondary: var(--cv-secondary);
+  --color-accent: var(--cv-accent);
+  --color-bg: var(--cv-bg);
+  --color-surface: var(--cv-surface);
+  --color-text: var(--cv-text);
+  --color-muted: var(--cv-muted);
+  --color-line: var(--cv-border);
+  --color-seat-available: var(--seat-available);
+  --color-seat-selected: var(--seat-selected);
+  --color-seat-held: var(--seat-held);
+  --color-seat-booked: var(--seat-booked);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Avenir Next", "Segoe UI Variable Display", ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--cv-bg);
+  color: var(--cv-text);
+  font-family: var(--font-sans);
+  transition: background-color 1.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.ambient {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb, var(--cv-primary) 26%, transparent), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--cv-accent) 14%, transparent), transparent 60%),
+    var(--cv-bg);
+  transition: background 1.2s ease;
+}
+
+.glass {
+  background: color-mix(in srgb, var(--cv-surface) 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--cv-border);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.65rem 1.2rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  transition: transform 0.15s ease, background-color 0.3s ease, opacity 0.2s;
+  min-height: 44px; /* touch target */
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+.btn-primary {
+  background: var(--cv-primary);
+  color: #fff;
+  box-shadow: 0 8px 30px -10px var(--cv-primary);
+}
+.btn-ghost { background: rgba(255, 255, 255, 0.06); color: var(--cv-text); border: 1px solid var(--cv-border); }
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
+
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cv-border);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--cv-text);
+  outline: none;
+  min-height: 44px;
+}
+.input:focus { border-color: var(--cv-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cv-primary) 30%, transparent); }
+
+.chip {
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--cv-border);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+.chip[aria-pressed="true"], .chip.active { background: var(--cv-primary); border-color: transparent; color: #fff; }
+
+:focus-visible { outline: 2px solid var(--cv-accent); outline-offset: 2px; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* 2D seat map patterns so state is never colour-only */
+.seat-held-pattern {
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.28) 0 3px, transparent 3px 7px);
+}
+
+html.high-contrast { --cv-border: rgba(255, 255, 255, 0.45); --cv-muted: #d4d4dc; }
+html.high-contrast .seat-btn { outline: 2px solid #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+}
+
+/* registered so colour changes animate between movie themes */
+@property --cv-primary { syntax: "<color>"; inherits: true; initial-value: #7c5cff; }
+@property --cv-secondary { syntax: "<color>"; inherits: true; initial-value: #1a1440; }
+@property --cv-accent { syntax: "<color>"; inherits: true; initial-value: #5fe1ff; }
+@property --cv-bg { syntax: "<color>"; inherits: true; initial-value: #07070b; }
+@property --cv-surface { syntax: "<color>"; inherits: true; initial-value: #12121a; }
+:root {
+  transition: --cv-primary 1.4s ease, --cv-secondary 1.4s ease, --cv-accent 1.4s ease, --cv-bg 1.4s ease,
+    --cv-surface 1.4s ease;
 }
