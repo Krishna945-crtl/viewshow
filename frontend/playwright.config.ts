@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
+  // CI runners have 2 cores and render WebGL in software; leaving the 3D seated view
+  // can block the main thread for a few seconds, so the default 5s is too tight there
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   workers: 1,
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
