@@ -4,6 +4,13 @@ import { useAuth } from "./auth";
 
 export const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
 export const WS_BASE = API_BASE.replace(/^http/, "ws");
+// uploaded posters live on the API host (/media/...), not on the site host
+const API_ORIGIN = API_BASE.replace(/\/api$/, "");
+
+export function assetUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.startsWith("/media/") ? `${API_ORIGIN}${url}` : url;
+}
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public extra: Record<string, unknown> = {}) {
@@ -45,7 +52,9 @@ type Opts = { method?: string; body?: unknown; auth?: boolean; retry?: boolean }
 export async function api<T = unknown>(path: string, opts: Opts = {}): Promise<T> {
   const token = useAuth.getState().session?.access;
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  // multipart: the browser writes its own boundary header
+  if (opts.body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   if (token && opts.auth !== false) headers.Authorization = `Bearer ${token}`;
 
   let res: Response;
@@ -53,7 +62,7 @@ export async function api<T = unknown>(path: string, opts: Opts = {}): Promise<T
     res = await fetch(`${API_BASE}${path}`, {
       method: opts.method ?? (opts.body !== undefined ? "POST" : "GET"),
       headers,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: isForm ? (opts.body as FormData) : opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {
     throw new ApiError(0, "network", "Can't reach the server. Check your connection.");

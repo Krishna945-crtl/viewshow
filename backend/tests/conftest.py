@@ -1,6 +1,10 @@
 import os
+import tempfile
 
 os.environ.setdefault("CV_ENV", "test")
+os.environ["CV_MEDIA_DIR"] = tempfile.mkdtemp(prefix="cv-media-")
+os.environ["CV_TMDB_API_KEY"] = ""
+os.environ["CV_TMDB_READ_TOKEN"] = ""
 os.environ.setdefault("CV_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/cineverse_test")
 os.environ.setdefault("CV_REDIS_URL", "redis://localhost:6379/15")
 os.environ["CV_RUN_SWEEPER"] = "false"

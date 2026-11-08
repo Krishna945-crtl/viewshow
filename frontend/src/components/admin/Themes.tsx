@@ -12,7 +12,7 @@ import { useApi } from "@/lib/useApi";
 
 const Auditorium3D = dynamic(() => import("@/components/theatre/Auditorium3D"), { ssr: false });
 const PARTICLES = ["none", "dust", "sand", "embers", "bubbles", "stars", "snow", "rain", "sparks", "petals", "leaves", "mist"];
-const SOUNDS = ["none", "desert_wind", "deep_ocean", "space_hum", "rain", "forest", "ember_crackle", "city_night", "cavern", "heartbeat", "music_box", "stadium"];
+const SOUNDS = ["none", "desert_wind", "deep_ocean", "space_hum", "rain", "forest", "ember_crackle", "city_night", "cavern", "heartbeat", "music_box", "stadium", "lounge", "temple_bells"];
 
 type Row = { id: string; name: string; config: Theme };
 

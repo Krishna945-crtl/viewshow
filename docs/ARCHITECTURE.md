@@ -31,7 +31,7 @@ flowchart LR
 backend/
   app/
     main.py                 app factory, middleware (request id, error log), lifespan (hub + sweeper)
-    seed.py                 demo data: themes, 13 movies, 6 venues, 3 layouts, a week of shows
+    seed.py                 demo data: themes, 22 movies (13 fictional + 9 real titles), 6 venues, 3 layouts, a week of shows
     core/                   config, security (argon2, JWT, HMAC), redis, rate limit, errors
     db/                     async engine/session, declarative base with naming conventions
     models/entities.py      SQLAlchemy models
@@ -42,7 +42,11 @@ backend/
     services/
       layout.py             authored layout -> seat coordinates (arcs, aisles, risers)
       viewing.py            view metrics + group recommendations
-      theme_engine.py       dynamic movie theme engine
+      theme_engine.py       dynamic movie theme engine (scoring, blending, guard, explain)
+      theme_lexicon.py      27 visual archetypes, every TMDB genre, colour words
+      palette.py            poster -> dominant colours (Pillow, bomb-safe)
+      storage.py            object storage for authorised artwork (local disk, S3-swappable)
+      tmdb.py               optional "import any real movie" client
       holds.py              Redis Lua seat holds
       bookings.py           booking lifecycle (create / confirm / release / expire)
       payments.py           mock + Razorpay providers
@@ -114,28 +118,44 @@ Seat width and row pitch depend on category. `layout.py` validates and expands t
 
 ## Dynamic Movie Theme Engine
 
+Works for **any** movie - nothing is hard-coded per title. Full write-up with worked examples: `THEME_ENGINE.md`.
+
 ```mermaid
 flowchart TD
-  M[movie metadata<br/>genres · mood tags · title · synopsis · key-art colours] --> C{custom theme attached?}
+  M[movie metadata<br/>genres · title · tagline · synopsis · TMDB keywords · mood tags] --> C{curated theme attached?}
   C -- yes --> G[guard: validate + clamp]
-  C -- no --> S[score 15 archetypes<br/>genre ×2 · word ×1.5 · tag ×3]
+  C -- no --> S[score 27 archetypes<br/>genre prior · title ×2.5 · story ×1.2 · keyword ×2 · mood tag ×3 · colour evidence]
+  ART[poster upload / TMDB poster] --> PAL[palette.py: dominant colours]
+  PAL --> S
   S --> B{any match?}
-  B -- yes --> X[take top, blend 2nd if within 60%]
-  B -- no --> H[title hash -> hue, harmonious palette]
-  X --> P[bend toward palette_hint colours]
+  B -- yes --> X[top archetype, blend 2nd in proportion to its score]
+  B -- no --> H[title hash -> signature palette]
+  X --> P[paint with poster colours, then admin hex picks]
   H --> P
-  P --> E[expand to full config:<br/>palette · lighting · fog · screen · particles · animation · sound]
+  P --> SIG[per-title signature: small hue drift + fog/pulse wobble]
+  SIG --> E[expand to full config:<br/>palette · lighting · fog · screen · particles · animation · sound]
   E --> G
-  G --> OUT[theme JSON sent with every movie]
+  G --> OUT[theme JSON + explain block sent with every movie]
 ```
 
-Archetypes: desert, ocean, cosmic, tech, neon, horror, inferno, frost, jungle, noir, romance, whimsy, royal,
-period, arena. Adding one is a dictionary entry.
+Archetypes: desert, wasteland, ocean, sky, cosmic, tech, neon, horror, inferno, frost, jungle, noir, underworld,
+kinetic, suspense, romance, pop, whimsy, sunny, stage, royal, mythic, battlefield, period, intimate, arena.
+Every TMDB genre (and labels like Mythological, Masala, Superhero, Sci-Fi) maps to at least one. Adding a look
+is one entry in `theme_lexicon.py`.
+
+Every auto theme carries `explain`: confidence, the top three archetypes with the exact evidence that scored
+them ("genre Crime", "story 'sandalwood'", "poster #ff3fa4"), and where the colours came from. The admin editor,
+Theme Lab and movie page show it as "Why this look?".
 
 `guard()` is the safety net for both auto and admin themes: backgrounds stay dark, light colours stay bright
 enough to light anything, ambient intensity/fog/particle density are capped (back rows stay visible, phones
-stay cool), unknown particle or sound presets fall back. **Seat status colours are not part of a theme** - they
-are fixed and drawn unlit, so availability reads the same under every film.
+stay cool), unknown particle or sound presets fall back. It is idempotent and an `explain` block is only ever
+kept on server-generated themes. **Seat status colours are not part of a theme** - they are fixed and drawn
+unlit, so availability reads the same under every film.
+
+Poster images are optional and never required: only their colours are stored unless an admin confirms the
+image is licensed to display. TMDB posters are shown only when `CV_TMDB_SHOW_POSTERS` is on (allowed by the
+TMDB API terms, with the attribution line the app prints on those movies).
 
 On the client, `ThemeState` keeps the *displayed* values and eases toward the target every frame
 (`1 - e^(-k·dt)`, with k from `transition_ms`). Lights, fog, screen shader, wall strips, seat fabric and

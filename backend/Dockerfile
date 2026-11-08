@@ -6,7 +6,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-RUN useradd -m app && chown -R app /app
+# media/ exists in the image so the named volume inherits the app user's ownership
+RUN mkdir -p /app/media && useradd -m app && chown -R app /app
 USER app
 EXPOSE 8000
 # migrate, seed only if empty, then serve

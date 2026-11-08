@@ -12,3 +12,4 @@ frontend/android/
 frontend/ios/
 *.log
 frontend/AGENTS.md
+backend/media/

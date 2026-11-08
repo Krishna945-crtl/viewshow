@@ -56,6 +56,7 @@ class MovieIn(BaseModel):
     synopsis: str = Field(default="", max_length=5000)
     genres: list[str] = Field(default_factory=list, max_length=8)
     mood_tags: list[str] = Field(default_factory=list, max_length=12)
+    keywords: list[str] = Field(default_factory=list, max_length=40)
     palette_hint: list[str] = Field(default_factory=list, max_length=3)
     language: str = "English"
     certificate: str = Field(default="UA", max_length=8)
@@ -91,13 +92,20 @@ class ThemeIn(BaseModel):
     config: dict
 
 
+class Swatch(BaseModel):
+    hex: str = Field(pattern=HEX_PATTERN)
+    weight: float = Field(ge=0, le=1)
+
+
 class ThemePreviewIn(BaseModel):
-    title: str = "Untitled"
-    tagline: str | None = None
-    synopsis: str = ""
-    genres: list[str] = []
-    mood_tags: list[str] = []
-    palette_hint: list[str] = []
+    title: str = Field(default="Untitled", max_length=200)
+    tagline: str | None = Field(default=None, max_length=300)
+    synopsis: str = Field(default="", max_length=5000)
+    genres: list[str] = Field(default_factory=list, max_length=8)
+    mood_tags: list[str] = Field(default_factory=list, max_length=12)
+    keywords: list[str] = Field(default_factory=list, max_length=40)
+    palette_hint: list[str] = Field(default_factory=list, max_length=3)
+    art_palette: list[Swatch] = Field(default_factory=list, max_length=8)
 
 
 class TheatreIn(BaseModel):

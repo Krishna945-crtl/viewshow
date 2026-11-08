@@ -7,10 +7,12 @@ import { useEffect, useState } from "react";
 import { useCam } from "@/components/theatre/camera";
 import SoundControl from "@/components/ui/SoundControl";
 import ThemeApplier from "@/components/ui/ThemeApplier";
+import ThemeExplain, { Swatches } from "@/components/ui/ThemeExplain";
 import { Spinner } from "@/components/ui/bits";
-import { api } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
+import { api, ApiError } from "@/lib/api";
 import { useDemoMap } from "@/lib/demoMap";
-import type { Movie, Theme } from "@/lib/types";
+import type { Movie, Swatch, Theme } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 import { detectGpu } from "@/lib/webgl";
 
@@ -24,29 +26,52 @@ export default function ThemeLab() {
   const initial = useSearchParams().get("movie");
   const { data: movies } = useApi<Movie[]>("/movies");
   const map = useDemoMap();
-  const [theme, setTheme] = useState<Theme | null>(null);
   const [active, setActive] = useState<string | null>(initial);
-  const [custom, setCustom] = useState({ title: "", genres: "", mood_tags: "", synopsis: "" });
+  // a theme generated from the form wins until the visitor picks a listed film again
+  const [customTheme, setCustomTheme] = useState<Theme | null>(null);
+  const [custom, setCustom] = useState({ title: "", genres: "", keywords: "", synopsis: "" });
+  const [art, setArt] = useState<Swatch[]>([]);
+  const [busy, setBusy] = useState(false);
   const [gpu, setGpu] = useState<string | null>(null);
   const go = useCam((c) => c.go);
 
   useEffect(() => setGpu(detectGpu()), []);
 
-  useEffect(() => {
-    if (!movies?.length) return;
-    const m = movies.find((x) => x.slug === active) ?? movies[0];
-    setTheme(m.theme);
-    if (!active) setActive(m.slug);
-  }, [movies, active]);
+  // derived, not synced through an effect - an effect here used to overwrite the custom theme
+  const current = movies?.find((x) => x.slug === active) ?? movies?.[0] ?? null;
+  const theme = customTheme ?? current?.theme ?? null;
+  const pick = (slug: string) => {
+    setActive(slug);
+    setCustomTheme(null);
+  };
 
   async function tryCustom(e: React.FormEvent) {
     e.preventDefault();
     const split = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
-    const t = await api<Theme>("/themes/preview", {
-      body: { title: custom.title || "Untitled", genres: split(custom.genres), mood_tags: split(custom.mood_tags), synopsis: custom.synopsis },
-    });
-    setActive(null);
-    setTheme(t);
+    try {
+      const t = await api<Theme>("/themes/preview", {
+        body: { title: custom.title || "Untitled", genres: split(custom.genres), keywords: split(custom.keywords),
+          synopsis: custom.synopsis, art_palette: art },
+      });
+      setCustomTheme(t);
+    } catch (err) {
+      toast((err as ApiError).message, "error");
+    }
+  }
+
+  // the image goes to the API only to read its colours - nothing is saved
+  async function readPoster(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      setArt((await api<{ art_palette: Swatch[] }>("/themes/preview-art", { body: form })).art_palette);
+    } catch (err) {
+      toast((err as ApiError).message, "error");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -57,7 +82,7 @@ export default function ThemeLab() {
 
       <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {(movies ?? []).map((m) => (
-          <button key={m.id} className="chip flex items-center gap-1.5" aria-pressed={active === m.slug} onClick={() => setActive(m.slug)}>
+          <button key={m.id} className="chip flex items-center gap-1.5" aria-pressed={!customTheme && current?.slug === m.slug} onClick={() => pick(m.slug)}>
             <span className="size-2.5 rounded-full" style={{ background: m.theme.palette.primary }} />{m.title}
           </button>
         ))}
@@ -101,17 +126,34 @@ export default function ThemeLab() {
                 <dt className="text-muted">Particles</dt><dd>{theme.particles.kind}</dd>
                 <dt className="text-muted">Fog density</dt><dd>{theme.fog.density.toFixed(3)}</dd>
                 <dt className="text-muted">Light pulse</dt><dd>{theme.animation.light_pulse.toFixed(2)}</dd>
-                <dt className="text-muted">Ambience</dt><dd>{theme.sound.preset.replace("_", " ")}</dd>
+                <dt className="text-muted">Ambience</dt><dd>{theme.sound.preset.replaceAll("_", " ")}</dd>
               </dl>
-              {active && <Link href={`/showtimes/?movie=${active}`} className="btn btn-primary w-full mt-4">Book this movie</Link>}
+              <details className="mt-3 group" open={theme.source === "auto"}>
+                <summary className="text-xs font-semibold cursor-pointer select-none">Why this look?</summary>
+                <div className="mt-2"><ThemeExplain theme={theme} /></div>
+              </details>
+              {!customTheme && current && <Link href={`/showtimes/?movie=${current.slug}`} className="btn btn-primary w-full mt-4">Book this movie</Link>}
             </section>
           )}
           <form onSubmit={tryCustom} className="glass rounded-2xl p-4 space-y-2">
             <h2 className="font-semibold">Theme any movie</h2>
-            <input className="input" placeholder="Title" value={custom.title} onChange={(e) => setCustom({ ...custom, title: e.target.value })} />
-            <input className="input" placeholder="Genres (comma separated)" value={custom.genres} onChange={(e) => setCustom({ ...custom, genres: e.target.value })} />
-            <input className="input" placeholder="Mood tags e.g. jungle, rain" value={custom.mood_tags} onChange={(e) => setCustom({ ...custom, mood_tags: e.target.value })} />
-            <textarea className="input min-h-20" placeholder="One-line synopsis" value={custom.synopsis} onChange={(e) => setCustom({ ...custom, synopsis: e.target.value })} />
+            <p className="text-xs text-muted">Type any film you like — real or imaginary. A poster helps, but isn&apos;t needed.</p>
+            <input className="input" placeholder="Title" aria-label="Title" value={custom.title} onChange={(e) => setCustom({ ...custom, title: e.target.value })} />
+            <input className="input" placeholder="Genres e.g. Action, Crime" aria-label="Genres" value={custom.genres} onChange={(e) => setCustom({ ...custom, genres: e.target.value })} />
+            <input className="input" placeholder="Keywords e.g. smuggling, forest" aria-label="Keywords" value={custom.keywords} onChange={(e) => setCustom({ ...custom, keywords: e.target.value })} />
+            <textarea className="input min-h-20" placeholder="One-line synopsis" aria-label="Synopsis" value={custom.synopsis} onChange={(e) => setCustom({ ...custom, synopsis: e.target.value })} />
+            <label className="block text-xs text-muted">
+              Poster (optional — only its colours are read)
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="block w-full mt-1 text-xs"
+                     onChange={(e) => readPoster(e.target.files?.[0])} />
+            </label>
+            {busy && <p className="text-xs text-muted">Reading colours…</p>}
+            {art.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Swatches colours={art} size="size-5" />
+                <button type="button" className="text-xs text-muted underline" onClick={() => setArt([])}>clear</button>
+              </div>
+            )}
             <button className="btn btn-primary w-full">Generate atmosphere</button>
           </form>
         </aside>

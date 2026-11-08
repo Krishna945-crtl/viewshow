@@ -29,6 +29,12 @@ services:
       CV_RAZORPAY_KEY_SECRET: ${CV_RAZORPAY_KEY_SECRET:-}
       CV_RAZORPAY_WEBHOOK_SECRET: ${CV_RAZORPAY_WEBHOOK_SECRET:-}
       CV_CORS_ORIGINS: http://localhost:3000,capacitor://localhost,http://localhost
+      CV_MEDIA_DIR: /app/media
+      # optional - import any real movie (free key at themoviedb.org)
+      CV_TMDB_API_KEY: ${CV_TMDB_API_KEY:-}
+      CV_TMDB_READ_TOKEN: ${CV_TMDB_READ_TOKEN:-}
+      CV_TMDB_SHOW_POSTERS: ${CV_TMDB_SHOW_POSTERS:-true}
+    volumes: [media:/app/media]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -44,3 +50,4 @@ services:
 
 volumes:
   pgdata:
+  media:
