@@ -1,5 +1,41 @@
 # Deployment
 
+## Free live demo (Render + Neon)
+
+One Render web service runs `Dockerfile.render`: the exported website and the API in one container,
+so the browser only talks to one origin. Render's free Key Value holds seat locks. Postgres is on Neon,
+because Render's free Postgres is deleted after 30 days. Everything below is on free plans.
+
+**1. Database (Neon)**
+
+1. Sign up at neon.com (GitHub login works) and create a project. Region: **AWS Asia Pacific (Singapore)**,
+   next to the Render region.
+2. **Connect** -> turn **Connection pooling off** -> copy the connection string
+   (`postgresql://...neon.tech/neondb?sslmode=require...`). Paste it as is - the app converts it for asyncpg.
+
+**2. App + Redis (Render)**
+
+1. Sign up at render.com with GitHub and allow access to this repository.
+2. **New -> Blueprint** -> pick the repo. Render reads `render.yaml` and asks for:
+   * `CV_DATABASE_URL` - the Neon string from step 1
+   * `CV_SEED_ADMIN_PASSWORD` - your own admin password (the one in the README is public)
+   * `CV_TMDB_API_KEY` - optional, enables "Import from TMDB"
+3. **Apply**. The first build takes about 10 minutes. On boot the container migrates, seeds (or tops up
+   showtimes) and starts. The site is at `https://cineverse-xxxx.onrender.com`.
+
+**What free plans mean for the demo**
+
+* The service sleeps after 15 minutes without traffic, and the first visit after that takes about a minute.
+  Open the link once before an interview or demo.
+* Every boot tops up showtimes, so the demo always has the next six days of shows.
+* The disk is wiped on every restart. Poster colours and TMDB poster links live in Postgres and survive,
+  but an image uploaded with "I have the rights to display this image" does not. Use object storage
+  (see below) if you need that.
+* Redis is in-memory: a restart drops active seat holds, which are 5-minute locks anyway.
+* `CV_ENV=prod` refuses to start with the laptop defaults for the secrets or the admin password.
+
+Public demo login for visitors: `demo@cineverse.dev` / `Demo@1234`.
+
 ## Docker Compose (single host)
 
 ```bash

@@ -25,6 +25,12 @@ Select Movie → Select City & Theatre → Select Date & Showtime → Enter 3D A
 
 > Theatres in the seed data are demo venues with simulated seats. Payments run in sandbox mode.
 
+## Free live demo
+
+`render.yaml` deploys the whole app to Render (website + API in one container, free Redis) with
+Postgres on Neon, all on free plans. Steps: `docs/DEPLOYMENT.md` -> "Free live demo".
+Visitors can sign in with `demo@cineverse.dev` / `Demo@1234`.
+
 ## Themes for any movie
 
 The auditorium re-lights itself for **every** film — not just the three reference looks (Dune, Godzilla,
