@@ -2,6 +2,7 @@ import asyncio
 import logging
 import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -77,6 +78,12 @@ def create_app() -> FastAPI:
     async def health():
         await get_redis().ping()
         return {"ok": True}
+
+    # single-container deploy: the exported website is served from here too, so the browser
+    # talks to one origin (no CORS, no URL wiring). mounted last - every /api route wins
+    site = Path(s.static_dir) if s.static_dir else None
+    if site and site.is_dir():
+        app.mount("/", StaticFiles(directory=site, html=True), name="site")
 
     return app
 

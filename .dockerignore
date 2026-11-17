@@ -1,0 +1,14 @@
+# used by Dockerfile.render (repo-root context). compose builds use backend/ and frontend/ contexts
+.git
+**/node_modules
+frontend/.next
+frontend/out
+frontend/android
+frontend/ios
+frontend/test-results
+frontend/playwright-report
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.env
+backend/media
