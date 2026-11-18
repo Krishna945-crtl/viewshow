@@ -1,3 +1,8 @@
+## 🌐 Live demo
+**https://cineverse-d1gw.onrender.com** — sign in with `demo@cineverse.dev` / `Demo@1234`
+
+> Free hosting: the first visit after 15 idle minutes takes about a minute to wake up.
+
 # CineVerse 3D
 
 Movie ticket booking app with an interactive 3D auditorium. Works on web, Android and iOS.
