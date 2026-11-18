@@ -10,5 +10,5 @@ COPY . .
 RUN mkdir -p /app/media && useradd -m app && chown -R app /app
 USER app
 EXPOSE 8000
-# migrate, seed only if empty, then serve
-CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --workers 2"]
+# migrate, seed (or top up showtimes), then serve. PORT / WEB_CONCURRENCY let hosts override
+CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --workers ${WEB_CONCURRENCY:-2}"]

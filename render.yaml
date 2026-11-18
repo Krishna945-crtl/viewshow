@@ -1,0 +1,44 @@
+# Free live demo on Render: Dashboard -> New -> Blueprint -> pick this repo.
+#
+# One container serves both the website and the API (Dockerfile.render), plus a free
+# Key Value (Redis) for seat holds. Postgres lives on Neon because Render's free
+# Postgres is deleted after 30 days - paste the Neon connection string when asked.
+# Step-by-step: docs/DEPLOYMENT.md -> "Free live demo".
+
+services:
+  - type: web
+    name: cineverse
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: CV_ENV
+        value: prod
+      - key: CV_DATABASE_URL
+        sync: false # Neon -> Connect -> connection string (pooling OFF)
+      - key: CV_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: cineverse-redis
+          property: connectionString
+      - key: CV_SEED_ADMIN_PASSWORD
+        sync: false # your own admin password - the README one is public
+      - key: CV_TMDB_API_KEY
+        sync: false # optional, enables "Import from TMDB"
+      - key: CV_JWT_SECRET
+        generateValue: true
+      - key: CV_TICKET_SIGNING_SECRET
+        generateValue: true
+      - key: CV_MOCK_PAYMENT_SECRET
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: "1" # free instance has little RAM
+
+  - type: keyvalue
+    name: cineverse-redis
+    plan: free
+    region: singapore
+    ipAllowList: [] # only the app above can reach it

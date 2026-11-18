@@ -1,7 +1,9 @@
 """Demo data: fictional theatres, realistic layouts, a mix of movies, a week of shows.
 
-    python -m app.seed            # only if the DB is empty
+    python -m app.seed            # empty DB: full seed. otherwise: top up showtimes
     python -m app.seed --reset    # wipe + reseed
+
+The container runs this on every boot, so a long-running demo never runs out of future shows.
 
 Every theatre is flagged is_demo=True - nothing here pretends to be a real cinema's inventory.
 """
@@ -11,8 +13,9 @@ import sys
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
+from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import dispose_engine, sessionmaker
 from app.models import Auditorium, Movie, MovieTheme, Seat, SeatCategory, Show, ShowPrice, Theatre, User
@@ -232,8 +235,8 @@ async def reset(db):
 
 async def seed(db, days: int = 6):
     db.add_all([
-        User(email="admin@cineverse.dev", full_name="Cine Admin", password_hash=hash_password("Admin@123"),
-             is_admin=True, city="Hyderabad"),
+        User(email="admin@cineverse.dev", full_name="Cine Admin",
+             password_hash=hash_password(get_settings().seed_admin_password), is_admin=True, city="Hyderabad"),
         User(email="demo@cineverse.dev", full_name="Demo Viewer", password_hash=hash_password("Demo@1234"),
              city="Hyderabad"),
     ])
@@ -246,7 +249,7 @@ async def seed(db, days: int = 6):
     await db.flush()
 
     movies = []
-    today = date.today()
+    today = datetime.now(IST).date()
     for i, m in enumerate(MOVIES):
         data = dict(m)
         theme = data.pop("theme", None)
@@ -275,20 +278,51 @@ async def seed(db, days: int = 6):
             auds.append((a, ln))
     await db.flush()
 
-    rot = 0
+    for d in range(days):
+        add_day(db, today + timedelta(days=d), [a for a, _ in auds], movies)
+    await db.commit()
+
+
+def add_day(db, day: date, auds: list[Auditorium], movies: list[Movie]) -> int:
+    """One day of shows in every auditorium. The rotation is keyed on the date, so a
+    topped-up day looks the same no matter when it was generated."""
+    rot = day.toordinal() * len(SLOTS)
+    n = 0
+    for idx, a in enumerate(auds):
+        ln = a.name
+        for slot in SLOTS:
+            movie = movies[(rot + idx) % len(movies)]
+            rot += 1
+            fmt = "IMAX-style" if "Grand" in ln else ("4K Recliner" if "Lounge" in ln else "2D")
+            show = Show(movie_id=movie.id, auditorium_id=a.id, starts_at=datetime.combine(day, slot, IST),
+                        format=fmt, language=movie.language)
+            show.prices = [ShowPrice(category=SeatCategory(k), price_paise=v) for k, v in PRICES[ln].items()]
+            db.add(show)
+            n += 1
+    return n
+
+
+async def top_up(db, days: int = 6) -> int:
+    """Fill in any upcoming day that has no shows yet. Safe to run on every boot."""
+    auds = list((await db.execute(
+        select(Auditorium).join(Theatre).where(Theatre.is_demo.is_(True), Auditorium.name.in_(PRICES))
+        .order_by(Theatre.name, Auditorium.name))).scalars())
+    movies = list((await db.execute(
+        select(Movie).where(Movie.is_active.is_(True)).order_by(Movie.release_date.desc(), Movie.title))).scalars())
+    if not auds or not movies:
+        return 0
+    today = datetime.now(IST).date()
+    added = 0
     for d in range(days):
         day = today + timedelta(days=d)
-        for idx, (a, ln) in enumerate(auds):
-            for slot in SLOTS:
-                movie = movies[(rot + idx) % len(movies)]
-                rot += 1
-                starts = datetime.combine(day, slot, IST)
-                fmt = "IMAX-style" if "Grand" in ln else ("4K Recliner" if "Lounge" in ln else "2D")
-                show = Show(movie_id=movie.id, auditorium_id=a.id, starts_at=starts, format=fmt,
-                            language=movie.language)
-                show.prices = [ShowPrice(category=SeatCategory(k), price_paise=v) for k, v in PRICES[ln].items()]
-                db.add(show)
+        start = datetime.combine(day, time(0), IST)
+        has = (await db.execute(select(func.count(Show.id)).where(
+            Show.starts_at >= start, Show.starts_at < start + timedelta(days=1),
+            Show.auditorium_id.in_([a.id for a in auds])))).scalar_one()
+        if not has:
+            added += add_day(db, day, auds, movies)
     await db.commit()
+    return added
 
 
 async def main():
@@ -296,7 +330,8 @@ async def main():
         if "--reset" in sys.argv:
             await reset(db)
         elif (await db.execute(select(User.id).limit(1))).first():
-            print("database already has data - use --reset to wipe it")
+            print("database already has data - topped up %d new shows" % await top_up(db))
+            await dispose_engine()
             return
         await seed(db)
         print("seeded: movies=%d theatres=%d" % (len(MOVIES), len(THEATRES)))

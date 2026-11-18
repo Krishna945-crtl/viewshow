@@ -24,7 +24,8 @@ from app.core.config import get_settings
 from app.db.base import Base
 import app.models  # noqa: F401
 
-config.set_main_option('sqlalchemy.url', get_settings().database_url)
+# configparser treats % as interpolation - url-encoded passwords need it doubled
+config.set_main_option('sqlalchemy.url', get_settings().database_url.replace('%', '%%'))
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

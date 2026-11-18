@@ -3,7 +3,10 @@
 import { useAuth } from "./auth";
 
 export const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
-export const WS_BASE = API_BASE.replace(/^http/, "ws");
+// "/api" means same origin as the site (single-container deploy) - WebSocket needs a full ws(s):// url
+export const WS_BASE = API_BASE.startsWith("/")
+  ? typeof window === "undefined" ? API_BASE : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}${API_BASE}`
+  : API_BASE.replace(/^http/, "ws");
 // uploaded posters live on the API host (/media/...), not on the site host
 const API_ORIGIN = API_BASE.replace(/\/api$/, "");
 
